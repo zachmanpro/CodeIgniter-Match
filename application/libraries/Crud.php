@@ -1,5 +1,7 @@
 <?php  if (!defined('BASEPATH')) exit('No direct script access allowed');
 
+if (!class_exists('Crud'))
+{
 class Crud
 {
     protected $default_model_class = 'crud_model';
@@ -366,11 +368,11 @@ class Crud
         $method = $this->ci->router->method;
         $param_data = array();
 
-     //   dump($segments);
+        //dump($segments);
 
         // find the method segment and keep rest
         $i = count($segments);
-        while ($segments[$i] != $method && $i > 0)
+        while ($i > 0 && $segments[$i] != $method)
         {
             array_unshift($param_data, $segments[$i]);
             array_pop($segments);
@@ -397,11 +399,7 @@ class Crud
         $this->unique_control_name = 'C'.substr(md5($this->model->get_table()),0,8);
     }
 }
-
-
-
-
-
+}
 
 
 /* End of file Crud.php */

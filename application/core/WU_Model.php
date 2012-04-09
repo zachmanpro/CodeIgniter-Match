@@ -1,192 +1,353 @@
 <?php  if ( ! defined('BASEPATH')) exit('No direct script access allowed');
+
 /**
- * WU Model Class Extention to use for CRUD
+ * Super WU_Model Class
  *
- * Data access layer for CRUD
- *
- * @package		CodeIgniter
- * @subpackage	Models
- * @author		Zachie du Bruyn
- * @category	Model
+ * @package	Core
+ * @subpackage	Model
+ * @category	Models
+ * @author	Zachie du Bruyn
  */
 class WU_Model extends CI_Model
 {
-    protected $table_name = null;
-    protected $table_unigue_name = null;
-    protected $primary_key = null;
-    protected $relations = array();
-    protected $display_as = array();
+    public $table_name = '';
+    public $primary_key = '';
+    public $primary_filter = 'intval';
+    public $order_by = '';
+    public $has_items = FALSE;
+    public $item_table = '_items';
+    public $item_key = 'items';
+    public $item_id_key = '_id';
 
-    protected $db_type_input_mapping = array(
-                'int'       => 'input',
-                'decimal'   => 'input',
-                'varchar'   => 'input',
-                'text'      => 'texteditor',
-                'timestamp' => 'date'
-            );
+    const ALL = FALSE;
 
     /**
-     * Class Constructor
-     */
-    public function __construct($table_name = '')
+    * Constructor for class
+    *
+    * @access	public
+    * @param	none
+    */
+    public function __construct()
     {
         parent::__construct();
-        $this->table_name = $table_name;
-
-        if ($table_name != '')
-        {
-            $this->primary_key = $this->_get_primary_key($table_name);
-        }
-        //dump($this->primary_key);
     }
 
-    public function get_list()
+
+    /**
+    * Get Data from Table
+    *
+    * @access	public
+    * @param	array
+    */
+    public function get ($ids = FALSE)
     {
-        $this->table_unigue_name = $this->_unique_table_name($this->table_name);
-        $this->db->from("{$this->table_name} as {$this->table_unigue_name}");
-        foreach ($this->relations as $relation)
-        {
-            $related_table = $relation['related_table'];
-            $unique_name = $this->_unique_table_name($related_table);
-            $related_primary_key = $relation['related_primary_key'];
-            $field_name = $relation['field_name'];
-            $this->db->join($related_table.' as '.$unique_name,
-                            "$unique_name.$related_primary_key = {$this->table_unigue_name}.$field_name",
-                            'left');
-            dump($relation);
+        // Set flag - if we passed a single ID we should return a single record
+        $single = $ids == FALSE || is_array($ids) ? FALSE : TRUE;
+
+        // Limit results to one or more ids
+        if ($ids !== FALSE) {
+
+            // $ids should always be an array
+            is_array($ids) || $ids = array($ids);
+
+            // Sanitize ids
+            $filter = $this->primary_filter;
+            $ids = array_map($filter, $ids);
+
+            $this->db->where_in($this->primary_key, $ids);
         }
-        return $this->db->get()->result_array();
-    }
 
-    public function get_fields()
-    {
-        $db_fields = $this->_get_field_types_for_table();
-        $fields_with_relation = array_keys($this->relations);
-        $fields_with_display_as = array_keys($this->display_as);
+        // Set order by if it was not already set
+        count($this->db->ar_orderby) || $this->db->order_by($this->order_by);
 
-        $fields = array();
+        $single == FALSE || $this->db->limit(1);
 
-        foreach ($db_fields as $db_field)
+        $data = $this->db->get($this->table_name)->result_array();
+
+        $return_data = array();
+
+        if ($this->has_items == TRUE)
         {
-            $field = array();
-            $field['name'] = $db_field->name;
-            $field['display_as'] = $db_field->name;
-            if (in_array($db_field->name, $fields_with_display_as))
+            foreach ($data as $row)
             {
-                $field['display_as'] = $this->display_as[$db_field->name];
+                $row[$this->item_key] = $this->get_items($row[$this->primary_key]);
+                $return_data[] = $row;
             }
-            $field['db_type'] = $db_field->type;
-            $field['type'] = $this->db_type_input_mapping[$db_field->type];
-
-    //        if (in_array($db_field->name,$fields_with_relation))
-    //        {
-    //            $relation = $this->relations[$db_field->name];
-    //			list($field_name, $related_table, $related_field_title, $related_filter, $related_type) = $relation;
-    //            $options = $this->db->where()->get($related_table)->result_array();
-    //        }
-            $fields[] = $field;
-        }
-
-        return $fields;
-    }
-
-    protected function _get_primary_key($table_name)
-    {
-        $fields = $this->_get_field_types_for_table($table_name);
-
-        $key = array();
-
-	    foreach($fields as $field)
-	    {
-	    	if($field->primary_key == 1)
-	    	{
-	    		$key[] = $field->name;
-	    	}
-	    }
-
-        if (count($key) == 0)
-        {
-            return false;
-        }
-        else if (count($key) == 1)
-        {
-            return array_shift($key);
         }
         else
         {
-            return $key;
+            $return_data = $data;
         }
+
+        if ($single)
+            $return_data = array_shift($return_data);
+
+        return $return_data;
     }
 
     /**
-     * Get the Basic information about the table's fields from DB
-     *
-     * @param   string $table_name
-     * @return  array
-     */
-    protected function _get_field_types_for_table($table_name = null)
+    * Get Data from Table using filters
+    *
+    * @access	public
+    * @param	multi
+    * @param    multi
+    * @param    bool
+    * @param    bool
+    * @param    bool
+    * @return   array
+    */
+    public function get_by ($key, $val = FALSE, $orwhere = FALSE, $single = FALSE, $like = false)
     {
-		if (isset($this->field_types[$table_name]))
-		{
-			return $this->field_type[$table_name];
-		}
+        // Limit results
+        if (! is_array($key)) {
+            $this->db->where(htmlentities($key), htmlentities($val));
+        }
+        else {
+            $key = array_map('htmlentities', $key);
 
-    	$db_field_types = array();
-        if ($table_name == null)
+            if ($like)
+                $where_method = $orwhere == TRUE ? 'or_like' : 'like';
+            else
+                $where_method = $orwhere == TRUE ? 'or_where' : 'where';
+
+            $this->db->$where_method($key);
+        }
+
+        $single == FALSE || $this->db->limit(1);
+
+        $return_data = $this->get();
+
+        if ($single)
+            $return_data = array_shift($return_data);
+
+        return $return_data;
+    }
+
+
+    /**
+    * Get Data from Table using filters
+    *
+    * @access	public
+    * @param	multi
+    * @param    multi
+    * @param    bool
+    * @param    bool
+    * @param    bool
+    * @return   int
+    */
+    public function get_count($key = FALSE, $val = FALSE, $orwhere = FALSE, $like = false)
+    {
+        // Temporary disable items
+        $old_has_items = $this->has_items;
+        $this->has_items = false;
+
+        $this->db->select("count({$this->primary_key}) as TotalRows");
+
+        if ($key)
         {
-            $table_name = $this->table_name;
+
+            $row = $this->get_by($key, $val, $orwhere, TRUE, $like);
+            $rows_count = $row['TotalRows'];
         }
-    	foreach($this->db->query("SHOW COLUMNS FROM {$table_name}")->result() as $db_field_type)
-    	{
-    		$type = explode("(",$db_field_type->Type);
-    		$db_type = $type[0];
+        else
+        {
+            $records = $this->get();
+            $rows_count = $records[0]['TotalRows'];
+        }
 
-    		if(isset($type[1]))
-    		{
-    			$length = (int)substr($type[1],0,strpos($type[1],")"));
-    		}
-    		else
-    		{
-    			$length = '';
-    		}
-    		$db_field_types[$db_field_type->Field]['db_max_length'] = $length;
-    		$db_field_types[$db_field_type->Field]['db_type'] = $db_type;
-    		$db_field_types[$db_field_type->Field]['db_null'] = $db_field_type->Null == 'YES' ? true : false;
-    		$db_field_types[$db_field_type->Field]['db_extra'] = $db_field_type->Extra;
-    	}
-
-    	$results = $this->db->field_data($this->table_name);
-    	foreach($results as $num => $row)
-    	{
-    		$row = (array)$row;
-    		$results[$num] = (object)( array_merge($row, $db_field_types[$row['name']])  );
-    	}
-
-		$this->field_types[$table_name] = $results;
-
-    	return $results;
+        // Restore items value
+        $this->has_items = $old_has_items;
+        return (int)$rows_count;
     }
 
     /**
-     * Method to calulate a unique name for a table needed in joins
-     *
-     * @param   string $field_name
-     * @return  string
-     */
-    protected function _unique_table_name($field_name)
+    * Get Data from Items Table
+    *
+    * @access	public
+    * @param	none
+    * @return   array
+    */
+    public function get_items($id)
     {
-        // Add T to a md5 key - can't start with number
-    	return 'T'.substr(md5($field_name),0,8);
+        $this->db->from($this->get_item_table())->where($this->primary_key,$id);
+        $data = $this->db->get()->result_array();
+        return $data;
     }
 
     /**
-     * Method to calulate a unique name for a field needed in joins
-     *
-     * @param   string $field_name
-     * @return  string
-     */
-    protected function _unique_field_name($field_name)
+    * Get Items Table name
+    *
+    * @access	public
+    * @param	none
+    * @return   string
+    */
+    public function get_item_table()
     {
-    	return 'F'.substr(md5($field_name),0,8); //This s is because is better for a string to begin with a letter and not with a number
+        #-> prefix
+        if (substr($this->item_table,-1,1) == '_')
+        {
+            return $this->item_table.$this->table_name;
+        }
+        #-> postfix
+        if (substr($this->item_table,1,1) == '_')
+        {
+            return $this->table_name.$this->item_table;
+        }
+        #-> as is
+        return $this->item_table;
     }
+
+    /**
+    * Get Items Table ID key
+    *
+    * @access	public
+    * @param	none
+    * @return   string
+    */
+    public function get_item_id_key()
+    {
+        $table = $this->get_item_table();
+        #-> prefix
+        if (substr($this->item_id_key,-1,1) == '_')
+        {
+            return $this->item_id_key.$table;
+        }
+        #-> postfix
+        if (substr($this->item_id_key,1,1) == '_')
+        {
+            return $table.$this->item_table;
+        }
+        #-> as is
+        return $this->item_id_key;
+    }
+
+    /**
+    * Get Root Parent records
+    *
+    * @access	public
+    * @param	none
+    * @return   string
+    */
+    public function get_parents()
+    {
+        $data = $this->get_by("parent_id",0);
+        return $data;
+    }
+
+    public function get_children($parent_id = 0)
+    {
+        $data = $this->get_by("parent_id",$parent_id);
+        return $data;
+    }
+
+    public function get_tree($parent_id = 0)
+    {
+        $return = array();
+        $rows = $this->get_children($parent_id);
+        if (!is_array($rows))
+            return false;
+        foreach ($rows as $row)
+        {
+            $row['children'] = $this->get_tree($row[$this->primary_key]);
+            $return[] = $row;
+        }
+        return $return;
+    }
+
+
+    /**
+    * Save Data to Table - single record
+    *
+    * @access	public
+    * @param	array
+    */
+    public function save($data)
+    {
+        $items = array();
+        if ($this->has_items && isset($data[$this->item_key]))
+        {
+            $items = $data[$this->item_key];
+            unset($data[$this->item_key]);
+        }
+
+        $id = (!is_array($this->primary_key) && isset($data[$this->primary_key])) ? $data[$this->primary_key] : false;
+
+        if ($id == FALSE)
+        {
+            // This is an insert
+            $this->db->set($data)->insert($this->table_name);
+        }
+        else
+        {
+            // This is an update
+            $filter = $this->primary_filter;
+            $this->db->set($data)->where($this->primary_key, $filter($id))->update($this->table_name);
+        }
+
+        $id = $id == FALSE ? $this->db->insert_id() : $id;
+
+
+        $item_table_key = $this->get_item_id_key();
+        foreach ($items as $item)
+        {
+            if (!isset($item[$item_table_key]) || $item[$item_table_key] == 0)
+            {
+                // This is an item insert
+                $item[$this->item_key] = $id;
+                echo($this->db->set($item)->insert($this->get_item_table()));
+            }
+            else
+            {
+                // This is an item update
+                $filter = $this->primary_filter;
+                $this->db->set($item)->where($this->item_key, $filter($item[$item_table_key]))->update($this->get_item_table());
+            }
+        }
+
+        // Return the ID
+        return $id;
+    }
+
+    /**
+    * Set paging variables
+    *
+    * @access	public
+    * @param	int
+    * @param    int
+    */
+    public function set_paging($offset = 0, $limit = 20)
+    {
+        $this->db->limit($limit);
+        $this->db->offset($offset);
+    }
+
+    /**
+    * Delete Record
+    *
+    * @access	public
+    * @param	int
+    */
+    public function delete($id)
+    {
+        $this->db->delete($this->table_name, array($this->primary_key => $id));
+        return true;
+    }
+
+    /**
+    * Optimize Table - reset Auto Key
+    *
+    * @access	public
+    * @param	none
+    * @return   true
+    */
+    public function optimize()
+    {
+        $sql = "OPTIMIZE TABLE  `{$this->table_name}`";
+        $this->db->query($sql);
+        return true;
+    }
+
 }
+
+/* End of file WU_Model.php */
+/* Location: ./application/core/WU_Model.php */

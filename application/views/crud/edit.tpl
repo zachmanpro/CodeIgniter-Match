@@ -21,7 +21,7 @@
                 $("#{$unique_control_name}_edit_form").submit(function(){
                     var this_form = $(this);
 
-                    //$('#{$unique_control_name}_refresh').html('loading...');
+                    $('#{$unique_control_name}_submit').html('sending data...');
 
                     this_form.ajaxSubmit({
                         url: "{$ajax_update_uri}",

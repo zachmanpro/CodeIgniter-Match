@@ -6,7 +6,7 @@
         {include file="controls/{$field.type}.tpl"}
     {/foreach}
     <div class="form-actions">
-        <button type="submit" class="btn btn-primary">Add {$subject}</button>
+        <button type="submit" class="btn btn-primary" id="{$unique_control_name}_submit">Add {$subject}</button>
         <button class="btn">Cancel</button>
     </div>
   </fieldset>

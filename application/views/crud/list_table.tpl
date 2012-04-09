@@ -5,7 +5,7 @@
                <th colspan="{$columns|@count + 1}">
                     {ci_helper_function helper="inflector" name="plural" params=$subject}
                     <div class="btn-group pull-right">
-                        <a class="btn btn-mini btn-success" href="{$add_url}"><i class="icon-plus-sign icon-white"></i> New Subject</a>
+                        <a class="btn btn-mini btn-success" href="{$add_url}"><i class="icon-plus-sign icon-white"></i> New {$subject}</a>
                     </div>
                </th>
             </tr>
@@ -32,7 +32,7 @@
                 <td>
                     <div class="btn-group">
                         <a class="btn btn-mini btn-primary" href="{$edit_url}{$row.$primary_key}"><i class="icon-pencil icon-white"></i></a>
-                        <a class="btn btn-mini btn-danger" href="{$edit_url}{$row.$primary_key}"><i class="icon-remove icon-white"></i></a>
+                        <a class="btn btn-mini btn-danger" href="{$delete_url}{$row.$primary_key}"><i class="icon-remove icon-white"></i></a>
                     </div>
                 </td>
             </tr>

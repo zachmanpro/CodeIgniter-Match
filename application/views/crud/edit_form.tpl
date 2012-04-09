@@ -7,7 +7,7 @@
         {include file="controls/{$field.type}.tpl"}
     {/foreach}
     <div class="form-actions">
-        <button type="submit" class="btn btn-primary">Update {$subject}</button>
+        <button type="submit" class="btn btn-primary" id="{$unique_control_name}_submit">Update {$subject}</button>
         <a class="btn" href="{$list_url}">Cancel</a>
     </div>
   </fieldset>

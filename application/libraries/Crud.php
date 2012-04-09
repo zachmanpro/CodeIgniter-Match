@@ -1,6 +1,6 @@
 <?php  if (!defined('BASEPATH')) exit('No direct script access allowed');
 
-class Crud_tree
+class Crud
 {
     protected $default_model_class = 'crud_model';
     protected $model_class = 'crud_model';

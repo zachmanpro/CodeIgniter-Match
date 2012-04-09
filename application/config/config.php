@@ -1,5 +1,25 @@
 <?php  if ( ! defined('BASEPATH')) exit('No direct script access allowed');
 
+function __autoload ($class)
+{
+    $file = APPPATH . 'libraries/' . $class. EXT;
+    if (strpos($class, 'CI_') !== 0)
+    {
+        if (file_exists($file) && is_file($file))
+        {
+            @include_once($file);
+        }
+    }
+    $file = APPPATH . 'core/' . $class. EXT;
+    if (strpos($class, 'CI_') !== 0)
+    {
+        if (file_exists($file) && is_file($file))
+        {
+            @include_once($file);
+        }
+    }
+}
+
 /*
 |--------------------------------------------------------------------------
 | Base Site URL
@@ -26,7 +46,7 @@ $config['base_url']	= '';
 | variable so that it is blank.
 |
 */
-$config['index_page'] = 'index.php';
+$config['index_page'] = '';
 
 /*
 |--------------------------------------------------------------------------
@@ -106,7 +126,7 @@ $config['enable_hooks'] = FALSE;
 | http://codeigniter.com/user_guide/general/creating_libraries.html
 |
 */
-$config['subclass_prefix'] = 'MY_';
+$config['subclass_prefix'] = 'WU_';
 
 
 /*

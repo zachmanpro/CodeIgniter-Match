@@ -1,0 +1,1 @@
+<input type="hidden" {if isset($field.value)}value="{$field.value}"{/if} id="{$field.name}" name="{$field.name}" />

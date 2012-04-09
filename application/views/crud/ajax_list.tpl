@@ -1,0 +1,1 @@
+{include file="crud/list_table.tpl"}

@@ -37,7 +37,7 @@ Contributing
 CodeIgniter Match is a community driven project and accepts contributions of code
 and documentation from the community. These contributions are made in the form
 of Issues or `Pull Requests <http://help.github.com/send-pull-requests/>`_ on
-the `EllisLab CodeIgniter repository
+the `CodeIgniter Match repository
 <https://github.com/zachmanpro/CodeIgniter-Match>`_ on GitHub.
 
 Issues are a quick way to point out a bug. If you find a bug or documentation

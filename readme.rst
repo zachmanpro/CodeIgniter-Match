@@ -4,11 +4,11 @@ What is CodeIgniter Match
 
 CodeIgniter Match is a CodeIgniter (an Application Development Framework -
 a toolkit - for people who build web sites using PHP) project starting block
-that aims to incourage TDD and RAD. Its goal is to enable you to start
-developing CodeIgniter projects much faster by exstending the rich set of
+that aims to encourage TDD and RAD. Its goal is to enable you to start
+developing CodeIgniter projects much faster by extending the rich set of
 libraries that CodeIgniter have for commonly needed tasks like CRUD, Extensive
 Unit Tests (SimpleTest), Extensive Templating (Smarty) and new CSS framework
-Bootsrap
+Bootstrap
 
 *******************
 Release Information
